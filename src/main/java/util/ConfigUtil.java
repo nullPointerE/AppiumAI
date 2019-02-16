@@ -10,24 +10,14 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.*;
 
-/**
- * Created by Ma Yi on 2017/4/27.
- */
 public class ConfigUtil {
     public static Logger log = LoggerFactory.getLogger(ConfigUtil.class);
     private static String udid;
-    private static String port;
     private static ConfigUtil configUtil;
     private static Map<String,Object> configItems;
     private static String rootDir;
     private static String outputDir;
-    private static String serverIp = "0.0.0.0";
     private static boolean showDomXML = false;
-    private static boolean dbLogEnabled = false;
-    private static boolean perLogEnabled = false;
-    private static boolean generateVideo = true;
-    private static boolean videoVertical = true;
-    private static List<String> blackKeyList = new ArrayList<>();
 
     public static boolean isShowDomXML() {
         return showDomXML;
@@ -42,11 +32,8 @@ public class ConfigUtil {
     public static final String ANDROID_EXCLUDE_TYPE = "ANDROID_EXCLUDE_TYPE";
     public static final String ANDROID_CLICK_XPATH_HEADER = "ANDROID_CLICK_XPATH_HEADER";
     public static final String IOS_EXCLUDE_BAR = "IOS_EXCLUDE_BAR";
-    public static final String ANDROID_USERNAME = "ANDROID_USERNAME";
-    public static final String ANDROID_PASSWORD = "ANDROID_PASSWORD";
     public static final String ANDROID_LOGIN_ELEMENTS = "LOGIN_ELEMENTS_ANDROID";
     public static final String ANDROID_BACK_KEY = "ANDROID_BACK_KEY";
-    public static final String LOGIN_ELEMENTS_ANDROID = "LOGIN_ELEMENTS_ANDROID";
 
     //iOS
     public static final String IOS_EXCLUDE_TYPE = "IOS_EXCLUDE_TYPE";
@@ -68,14 +55,7 @@ public class ConfigUtil {
     public static final String ENABLE_VERTICAL_SWIPE = "ENABLE_VERTICAL_SWIPE";
     public static final String DOM_DISPLAY = "DOM_DISPLAY" ;
     public static final String REMOVE_BOTTOM_BOUND = "REMOVE_BOTTOM_BOUND";
-    public static final String GENERATE_VIDEO = "GENERATE_VIDEO";
-    public static final String VIDEO_VERTICAL = "VIDEO_VERTICAL";
     public static final String USER_LOGIN_INTERVVAL = "USER_LOGIN_INTERVVAL";
-    public static final String APPIUM_SERVER_IP = "APPIUM_SERVER_IP";
-
-    //INFLUXDB
-    public static final String DB_PORT = "DB_PORT";
-    public static final String DB_IP = "DB_IP";
 
     //DEFAULT VALUE ITEM
     public static final String CRAWLER_RUNNING_TIME = "CRAWLER_RUNNING_TIME";
@@ -108,11 +88,6 @@ public class ConfigUtil {
     public static final String UNPINCH_RATIO = "UNPINCH_RATIO";
     public static final String DRAG_RATIO = "DRAG_RATIO";
     public static final String BACK_KEY_RATIO = "BACK_KEY_RATIO";
-
-    //LOG
-    public static final String DB_LOG = "DB_LOG";
-    public static final String PERF_LOG = "PERF_LOG";
-
     public static final String MONKEY_SPECIAL_POINT_LIST = "MONKEY_SPECIAL_POINT_LIST";
     public static final String LONG_PRESS_LIST = "LONG_PRESS_LIST";
     public static final String CLICK_ITEM_XPATH_LIST = "CLICK_ITEM_XPATH_LIST";
@@ -121,10 +96,6 @@ public class ConfigUtil {
             LONG_PRESS_RATIO,CLICK_SPECIAL_POINT_RATIO,HOME_KEY_RATIO,
             DOUBLE_TAP_RATIO,PINCH_RATIO,UNPINCH_RATIO,DRAG_RATIO,BACK_KEY_RATIO,CLICK_ITEM_BY_XPATH_RATIO));
     private static long clickCount;
-
-    //MINI Programme
-    public static final String MINI_PROGRAM_NAME = "MINI_PROGRAM_NAME";
-    //public static final String MINI_PROGRAM_PROCESS = "MINI_PROGRAM_PROCESS";
 
 
     public static ConfigUtil initialize(String file, String udid){
@@ -158,13 +129,8 @@ public class ConfigUtil {
                 }
             }
 
-            port = getStringValue("PORT");
             clickCount = getLongValue("MAX_CLICK_COUNT");
-            dbLogEnabled = ConfigUtil.getBooleanValue(DB_LOG);
-            perLogEnabled = ConfigUtil.getBooleanValue(PERF_LOG);
             showDomXML = ConfigUtil.getBooleanValue(DOM_DISPLAY,true);
-            generateVideo = ConfigUtil.getBooleanValue(GENERATE_VIDEO,true);
-            videoVertical = ConfigUtil.getBooleanValue(VIDEO_VERTICAL,true);
 
             if(outputDir == null) {
                 rootDir = System.getProperty("user.dir");
@@ -176,10 +142,6 @@ public class ConfigUtil {
 
             //Create Root dir
             Util.createDirs(rootDir);
-
-            serverIp = getStringValue("APPIUM_SERVER_IP");
-            blackKeyList = getListValue(ITEM_BLACKLIST);
-
             log.info("rootDir is " + rootDir);
 
         }catch (Exception e){
@@ -190,47 +152,6 @@ public class ConfigUtil {
         return configUtil;
     }
 
-    public static void setDbLogEnabled(boolean dbLogEnabled) {
-        ConfigUtil.dbLogEnabled = dbLogEnabled;
-    }
-    public static long getRetryCount() {
-        return getLongValue("RETRY_COUNT");
-    }
-    public static void setPerLogEnabled(boolean perLogEnabled) {
-        ConfigUtil.perLogEnabled = perLogEnabled;
-    }
-    public static void setMaxDepth(String depth) {
-        setLongValue(MAX_DEPTH,depth);
-    }
-    public static void setScreenshotCount(String count) { configItems.put("SCREENSHOT_COUNT",count);}
-
-    public static List<String> getBlackKeyList(){
-        return blackKeyList;
-    }
-
-    public static String getServerIp() {
-        return serverIp;
-    }
-
-    public static void setServerIp(String ip) {
-        serverIp = ip;
-    }
-
-    public static boolean isGenerateVideo() {
-        return generateVideo;
-    }
-
-    public static boolean isVideoVertical() {
-        return videoVertical;
-    }
-
-    public static boolean isDbLogEnabled() {
-        return dbLogEnabled;
-    }
-
-    public static boolean isPerLogEnabled() {
-        return perLogEnabled;
-    }
 
     public static boolean boundRemoved(){
         return getBooleanValue(REMOVE_BOTTOM_BOUND,true);
@@ -312,14 +233,6 @@ public class ConfigUtil {
          setLongValue(ConfigUtil.CRAWLER_RUNNING_TIME,time);
     }
 
-    public static String getPort() {
-        return port;
-    }
-    public static void setPort(String port) {
-        ConfigUtil.port = port;
-        setStringValue("PORT",port);
-    }
-
     public static void setUdid(String name){
         udid = name;
     }
@@ -377,7 +290,6 @@ public class ConfigUtil {
 
     public static boolean getBooleanValue(String key, boolean defaultValue) {
         Boolean value = (Boolean) configItems.get(key);
-
         log.info("Config : " + key + " = " + value);
         return value == null? defaultValue : value;
     }
@@ -386,9 +298,4 @@ public class ConfigUtil {
         return getBooleanValue(key,false);
     }
 
-//    public static Map<String,Object> getMapValue(String key){
-//        Map<String,Object> map = (Map)configItems.get(key);
-//        log.info("Config : " + key + " = " + map);
-//        return map;
-//    }
 }

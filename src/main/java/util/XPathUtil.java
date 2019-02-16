@@ -23,7 +23,6 @@ public class XPathUtil {
     public static XPath xpath = XPathFactory.newInstance().newXPath();
     private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
 
-    private static Map<String, Map<String, Long>> monkeyClickedMap = new HashMap<>();
     private static Map<String, Long> clickedActivityMap = new HashMap<>();
     private static HashSet<String> set = new LinkedHashSet<>();
     private static DocumentBuilder builder;
@@ -60,26 +59,6 @@ public class XPathUtil {
     private static int deviceHeight;
     private static int deviceWidth;
 
-    //Monkey related configuration
-    private static Map<String,Long> monkeyEventRatioMap = new HashMap<>();
-    private static Map<String,Long> monkeyEventSummaryRatioMap = new HashMap<>();
-    private static List<Point> specialPointList = new ArrayList<>();
-    private static List<Point> longPressPointList = new ArrayList<>();
-    private static List<String> xpathItemList = new ArrayList<>();
-    private static long runningTime;
-    private static long testStartTime;// = System.currentTimeMillis();
-    private static StringBuilder repoStep = new StringBuilder();
-
-    public static HashSet<String> getSet() {
-        return set;
-    }
-    public static Map<String, Long> getClickedActivityMap() {
-        return clickedActivityMap;
-    }
-    public static Map<String, Map<String, Long>> getMonkeyClickedMap() {
-        return monkeyClickedMap;
-    }
-
     public static void showFailure(){
         log.info("Method: showFailure");
 
@@ -109,52 +88,6 @@ public class XPathUtil {
         log.error("\n==============================");
     }
 
-    private static void initMonkey(){
-        log.info("Method: initMonkey");
-
-        testStartTime = System.currentTimeMillis();
-        //Init money ratio data
-        for(String event : ConfigUtil.MONKEY_EVENT_RATION_LIST){
-            long ratio = ConfigUtil.getLongValue(event);
-            if(ratio > 0){
-                monkeyEventRatioMap.put(event,ratio);
-            }
-        }
-
-        //iOS不支持Home Key操作
-        if(!Util.isAndroid()){
-            monkeyEventRatioMap.remove(ConfigUtil.HOME_KEY_RATIO);
-        }
-
-        List<String> list = ConfigUtil.getListValue(ConfigUtil.MONKEY_SPECIAL_POINT_LIST);
-
-        for(String str : list){
-            str = str.trim();
-            String[] value = str.split(",");
-            int x = Integer.parseInt(value[0]);
-            int y = Integer.parseInt(value[1]);
-
-            specialPointList.add(new Point(x,y));
-            log.info("Special point x: " + x + " y: " + y);
-        }
-
-        list = ConfigUtil.getListValue(ConfigUtil.LONG_PRESS_LIST);
-        for(String str : list){
-            str = str.trim();
-            String[] value = str.split(",");
-            int x = Integer.parseInt(value[0]);
-            int y = Integer.parseInt(value[1]);
-
-            longPressPointList.add(new Point(x,y));
-            log.info("Long press point x: " + x + " y: " + y);
-        }
-
-        xpathItemList = ConfigUtil.getListValue(ConfigUtil.CLICK_ITEM_XPATH_LIST);
-
-        log.info("Monkey running time is " + runningTime + " seconds");
-        log.info("Monkey event list and ratio : \n" + monkeyEventRatioMap );
-    }
-
     private static Set<String> getBlackKeyXpathSet(List<String> list){
         Set<String> set = new HashSet<>();
 
@@ -171,22 +104,12 @@ public class XPathUtil {
     public static void initialize(String udid){
         log.info("Method: initialize");
         stop = false;
-        runningTime = ConfigUtil.getLongValue(ConfigUtil.CRAWLER_RUNNING_TIME);
-        testStartTime = System.currentTimeMillis();
         removedBounds = ConfigUtil.boundRemoved();
         userLoginInterval = ConfigUtil.getLongValue(ConfigUtil.USER_LOGIN_INTERVVAL);
 
         if(userLoginInterval <= 0){
             userLoginInterval = 1;
         }
-
-        log.info("Running time is " + runningTime);
-
-        if(runningTime <=0){
-            runningTime = 24*6*7;
-        }
-
-        log.info("Crawler running time is " + runningTime);
 
         //先遍历TabBar内的元素 再遍历 TabBar上的元素
 
@@ -349,7 +272,6 @@ public class XPathUtil {
                 if(pressBackPackageList.contains(packageName)){
                     isValid = PackageStatus.PRESS_BACK;
                     log.info("Package name :" + packageName + "is in pressBackList, so press back key");
-                    Driver.takesScreenShotAndPressBack(repoStep);
                 }
             }else{
                 //程序crash了，如果ignoreCrash为true,则重启app继续遍历
@@ -510,15 +432,6 @@ public class XPathUtil {
 
         log.info("userLoginCount is " + userLoginCount);
         userLoginCount ++;
-
-        //检查运行时间
-        long endTime = System.currentTimeMillis();
-
-        if((endTime - testStartTime) > ( runningTime * 60 * 1000)) {
-            log.info("已运行" + (endTime - testStartTime)/60/1000 + "分钟，任务即将结束");
-            stop = true;
-            return xml;
-        }
 
         Document document = builder.parse(new ByteArrayInputStream(xml.getBytes()));
         NodeList nodes = (NodeList) xpath.evaluate(clickXpath, document, XPathConstants.NODESET);
@@ -718,7 +631,7 @@ public class XPathUtil {
             if(swipeVertical){
                 log.info("Swipe vertical is enabled.");
 
-                Driver.swipeVertical(false,repoStep);
+                Driver.swipeVertical(false, repoStep);
                 currentXML = Driver.getPageSource();
 
                 previousPageStructure = afterPageStructure;
@@ -762,7 +675,7 @@ public class XPathUtil {
                 }else{
                     //log.info("========================================No TabBar element found");
                     //无TabBar或TabBar上所有的元素都点击过了，按下back key
-                    Driver.pressBackAndTakesScreenShot();
+                    Driver.pressBack();
                     log.info("========================================press back");
 
                     currentXML = Driver.getPageSource();
@@ -893,9 +806,7 @@ public class XPathUtil {
 
     private static void triggerElementAction(String xpath, String action, Object value){
         MobileElement element = Driver.findElement(By.xpath(xpath));
-
         log.info("Trigger element : " + xpath + " action : " + action + " value : " + value );
-
         switch (action.toCharArray()[0]){
             case 'c'://click
                 element.click();
@@ -919,14 +830,12 @@ public class XPathUtil {
     protected static boolean isSamePage(String pre,String after){
         log.info("Method: isSamePage");
         boolean ret = pre.equals(after);
-
         //退出时不截图, 只在界面发生变化且stop=false才截图。
         if(!ret && !stop) {
             //TODO:Remove comment
             //Driver.takeScreenShot();
             log.info("++++++++++++++++++ Activity Name  :  " + Driver.getCurrentActivity() + "+++++++++++++++++++++++");
         }
-
         return ret;
     }
 
@@ -1142,287 +1051,6 @@ public class XPathUtil {
         }
 
         return newXml;
-    }
-
-    public static long getClickCount() {
-        log.info("Method: getClickCount");
-        return clickCount;
-    }
-
-    private static ArrayList<String> initEventMap(){
-        log.info("Method: initEventMap");
-
-        ArrayList<String> array = new ArrayList<>();
-
-        for(String event : monkeyEventRatioMap.keySet()){
-            array.add(event);
-            monkeyEventSummaryRatioMap.put(event,0L);
-        }
-
-        log.info(array.toString());
-        return array;
-    }
-
-
-
-    public static void monkey(String pageSource){
-        log.info("Method: monkey");
-
-        userLogin(pageSource);
-        initMonkey();
-
-        boolean isLandscape = Driver.isLandscape();
-
-        int GAP_X = 80;
-        int GAP_Y = 80;
-        int x,y;
-        int index;
-
-        if(!Util.isAndroid()){
-            GAP_X = 50;
-            GAP_Y = 50;
-        }
-
-        //避免点击顶部状态条
-        int actualWidth = deviceWidth - GAP_X;
-        int actualHeight = deviceHeight - GAP_Y;
-        log.info("Actual width : "+deviceWidth*scale + " Actual height : " + deviceHeight*scale);
-
-        int centerX = deviceWidth/2;
-        int centerY = deviceHeight/2;
-
-        if(isLandscape){
-            centerX = deviceHeight/2;
-            centerY = deviceWidth/2;
-        }
-
-        longPressPointList.add(new Point(centerX, centerY));
-        log.info("Center X " + centerX + " Center Y " + centerY);
-
-        Driver.sleep(5);
-
-        ArrayList<String> ratioList = initEventMap();
-
-        if(ratioList.size()==0){
-            log.error("Available list size is 0");
-            return;
-        }
-
-        log.info("Monkey running time is (minutes): " + runningTime);
-
-        int specialPointSize = specialPointList.size();
-        int spIndex = 0;
-
-        int longPressPointSize = longPressPointList.size();
-        int lpIndex = 0;
-
-        int xpathListSize = xpathItemList.size();
-        int xpIndex = 0;
-
-        while (true) {
-            long endTime = System.currentTimeMillis();
-
-            if((endTime - testStartTime) > ( runningTime * 60 * 1000)) {
-                log.info("已运行" + (endTime - testStartTime)/60/1000 + "分钟，任务即将结束");
-                break;
-            }
-
-            log.info("Available event list : " + ratioList);
-            x = Util.internalNextInt(GAP_X, actualWidth);
-            y = Util.internalNextInt(GAP_Y, actualHeight);
-
-            if(isLandscape){
-                //Exchange X,Y in landscape mode
-                x=x+y;
-                y=x-y;
-                x=x-y;
-            }
-
-            int length = ratioList.size() ;
-
-            if(length <= 0){
-                ratioList = initEventMap();
-                length = ratioList.size();
-                log.info("----------------------------------------------Reinitialize ration-----------------");
-            }
-
-            index = Util.internalNextInt(0, length);
-            String event = ratioList.get(index);
-
-            log.info("index is "  + index );
-
-            Long count = monkeyEventSummaryRatioMap.get(event);
-
-            if(count >= monkeyEventRatioMap.get(event)){
-                log.info("---------Remove event " + event);
-                ratioList.remove(index);
-                continue;
-            }else{
-                count ++;
-                monkeyEventSummaryRatioMap.put(event,count);
-                log.info("\n\n================Event " + event + " count is " + count + " ====================\n");
-            }
-
-            //iOS has no concept of activity
-            if(Util.isAndroid()){
-                String eventType = event.replace("_RATIO","");
-                String currentActivityName = Driver.getCurrentActivity();
-                Map<String, Long> eventCountMap = monkeyClickedMap.get(currentActivityName);
-
-                Long eventCount = 1L;
-
-                if(eventCountMap == null){
-                    eventCountMap = new HashMap<>();
-                }else{
-                    eventCount = eventCountMap.get(eventType);
-
-                    if(eventCount != null){
-                        eventCount ++;
-                    }else{
-                        eventCount = 1L;
-                    }
-                }
-
-                log.info("Event count " + eventCount );
-
-                eventCountMap.put(eventType,eventCount);
-                monkeyClickedMap.put(currentActivityName,eventCountMap);
-
-                log.info("Current activity : " + currentActivityName);
-                log.info(monkeyClickedMap.toString());
-            }
-
-            int endX= Util.internalNextInt(GAP_X, actualWidth);
-            int endY= Util.internalNextInt(GAP_Y, actualHeight);
-
-            List<Point> pointList = new ArrayList<>();
-            pointList.add(new Point(x*scale,y*scale));
-            pointList.add(new Point(endX*scale,endY*scale));
-
-            try{
-                switch (event){
-                    case ConfigUtil.CLICK_RATIO:
-                        Driver.clickByCoordinate(x, y);
-                        break;
-                    case ConfigUtil.SWIPE_RATIO:
-                        Driver.takeScreenShot();
-
-                        if(isLandscape){
-                            //Exchange X,Y in landscape mode
-                            endX=endX+endY;
-                            endY=endX-endY;
-                            endX=endX-endY;
-                        }
-                        Driver.swipe(x, y, endX, endY);//防止下拉后锁屏
-                        break;
-                    case ConfigUtil.RESTART_APP_RATIO:
-                        Driver.appRelaunch();
-                        break;
-                    case ConfigUtil.HOME_KEY_RATIO:
-                        Driver.pressHomeKey();
-                        break;
-                    case ConfigUtil.CLICK_SPECIAL_POINT_RATIO:
-                        log.info("Special point list size : " + specialPointSize);
-                        log.info("Special point list  : " + specialPointList);
-                        log.info("spIndex  is " + spIndex);
-
-                        spIndex = spIndex % specialPointSize;
-                        //int random = Util.internalNextInt(0,size);
-                        Point point = specialPointList.get(spIndex++);
-
-                        Driver.clickByCoordinate(point.x, point.y);
-                        break;
-                    case ConfigUtil.LONG_PRESS_RATIO:
-                        //random = Util.internalNextInt(0,size);
-                        lpIndex = lpIndex % longPressPointSize;
-                        point = longPressPointList.get(lpIndex++);
-
-                        Driver.LongPressCoordinate(point.x, point.y);
-                        break;
-                    case ConfigUtil.DOUBLE_TAP_RATIO:
-                        Driver.doubleClickByCoordinate(x, y);
-                        break;
-                    case ConfigUtil.PINCH_RATIO:
-                        Driver.pinch(x,y,endX,endY,false);
-                        break;
-                    case ConfigUtil.UNPINCH_RATIO:
-                        Driver.pinch(x,y,endX,endY,true);
-                        break;
-                    case ConfigUtil.DRAG_RATIO:
-                        Driver.drag(x,y,endX,endY);
-                        break;
-                    case ConfigUtil.BACK_KEY_RATIO:
-                        Driver.pressBack();
-                    case ConfigUtil.CLICK_ITEM_BY_XPATH_RATIO:
-                        if(xpathListSize == 0){
-                            log.error("xpath list is 0");
-                            break;
-                        }
-
-                        log.info("Xpath item list size : " + specialPointSize);
-                        log.info("Xpath item list  : " + specialPointList);
-                        log.info("xpathIndex is " + xpIndex++);
-
-                        xpIndex = xpIndex % xpathListSize;
-
-                        MobileElement elem = Driver.findElementWithoutException(By.xpath(xpathItemList.get(xpIndex)));
-                        if(elem == null){
-                            log.error("!!!Element is not found by xpath : " + xpathItemList.get(xpIndex));
-                        }else{
-                            log.info("Element is found by xpath : " + xpathItemList.get(xpIndex));
-                        }
-
-                        break;
-                }
-
-                log.info(monkeyEventRatioMap.toString());
-                log.info(monkeyEventSummaryRatioMap.toString());
-
-                String xml = Driver.getPageSource(0);
-                String packageName=getAppName(xml);
-
-                if (PackageStatus.VALID != isValidPackageName(packageName, ignoreCrash)) {
-                    if (!ignoreCrash) {
-                        break;
-                    }
-                }
-                if (packageName.equals("com.tencent.mm") || packageName.equals("com.tencent.xin")){
-                    if(xml.contains("附近的小程序")){
-                        log.info("跳转到了小程序主页面，重启app");
-                        Driver.appRelaunch();
-                    }
-                }
-            }catch (Exception e){
-                e.printStackTrace();
-                log.error("Unexpected error found, continue testing");
-            }
-        }
-    }
-
-    public static StringBuilder getRepoStep(){
-        return repoStep;
-    }
-
-    public static String showNodes(String xml, String oldNodePath) throws Exception{
-        Document document = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-        NodeList nodes = (NodeList) xpath.evaluate(clickXpath, document, XPathConstants.NODESET);
-
-        int length = nodes.getLength();
-
-        log.info(String.valueOf("UI nodes length : " + length));
-        String temp = oldNodePath;
-
-
-        while(--length >=0){
-            Node node = nodes.item(length);
-            String xpath = getNodeXpath(node);
-            if(null != xpath) {
-                log.info("getNodeXpath: " + xpath +"\n");
-            }
-        }
-
-        log.info("!!!!! " + temp);
-        return temp;
     }
 }
 
