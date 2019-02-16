@@ -1,4 +1,4 @@
-package monkey.utils;
+package monkey;
 
 import org.openqa.selenium.remote.DriverCommand;
 import org.openqa.selenium.remote.RemoteExecuteMethod;

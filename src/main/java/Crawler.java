@@ -20,7 +20,6 @@ public class Crawler {
     private static Date beginTime = new Date();
     private static String logName;
     private static Map<String, String> summaryMap;//= new ListOrderedMap();
-    private static boolean isMonkey = false;
     private static List<String> crashFileList;
     private static boolean isReported = false;
     private static String udid;

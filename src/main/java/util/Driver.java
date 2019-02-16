@@ -326,20 +326,6 @@ public final class Driver {
 
             try {
                 list = var1.findElements(by);
-
-                //TODO: fix this for ios
-//                if(util.Util.isAndroid()) {
-//                    list = var1.findElements(by);
-//                }else {
-//
-//
-//                    String id = by.toString();//"By.id: type == 'XCUIElementTypeTextField'"
-//                    int length = id.length();
-//                    int index = id.indexOf(":");
-//                    id = id.substring(index + 2, length);
-//
-//                    list = ((IOSDriver) driver).findElementsByIosNsPredicate(id);
-//                }
             } catch (Exception e) {
                 log.info("!!!!!!!!!!!!!!!!!!!!!!Element : " + by.toString() + " is not founded! Polling again...");
             }
@@ -706,15 +692,6 @@ public final class Driver {
     }
 
 
-    public static void pressBackAndTakesScreenShot() {
-        takeScreenShot();
-        pressBack();
-    }
-
-    public static void pressBack(StringBuilder builder) {
-        pressBack();
-    }
-
     public static void drag(List<String> pointsList) {
         log.info(getMethodName());
         TouchAction dragAction = new TouchAction(driver);
@@ -747,7 +724,6 @@ public final class Driver {
 
     public static void pressBack() {
         log.info("Method : pressBack");
-
         if (Util.isAndroid()) {
             pressKeyCode(AndroidKey.BACK);
         } else {
@@ -759,7 +735,6 @@ public final class Driver {
 
     public static String getCurrentActivity() {
         String activity = "ios";
-
         if (Util.isAndroid()) {
             try {
                 activity = ((AndroidDriver) driver).currentActivity();
@@ -773,55 +748,11 @@ public final class Driver {
         return activity;
     }
 
-    public static String getCurrentPackage() {
-        String packageName = "ios package";
-
-        if (Util.isAndroid()) {
-            packageName = ((AndroidDriver) driver).getCurrentPackage();
-            log.info("packageName " + packageName);
-        }
-
-        return packageName;
-    }
-
-    public static int getSDKVersion(String udid) {
-        int sdkversion = -1;
-        String findCmd = Util.getGrep();
-
-        String cmd = "adb -s " + udid + " shell getprop | " + findCmd + " version.sdk";
-        ArrayList<String> cmdList = new ArrayList<>();
-        cmdList.add(cmd);
-        //[ro.build.version.sdk]: [25]
-        String res = Util.exeCmd(cmdList);
-
-        if (res == null || res.length() < 5) {
-            log.error("\n\nERROR:Fail to get sdk version!!!! The specified device udid : " + udid + " is not found \n");
-            String deviceList = Util.exeCmd("adb devices", false);
-            String output = "List of devices attached";
-            if (deviceList.length() < output.length() + 1) {
-                log.error("ERROR: No devices are connected!!!\n");
-            } else {
-                log.error("Connected devices are : " + deviceList + "\n");
-            }
-        } else {
-            int length = res.length();
-            int index = res.indexOf(":");
-
-            res = res.substring(index + 1, length).trim().substring(1, 3);//[25]
-            log.info("sdk version : " + res);
-            sdkversion = Integer.valueOf(res);
-        }
-
-        return sdkversion;
-    }
-
     public static String startLogRecord() {
         String logName = ConfigUtil.getRootDir() + File.separator + ConfigUtil.getDeviceName() + "-" + Util.getDatetime() + ".log";
 
         Runnable newRunnable = () -> {
-
             ArrayList<String> cmd = new ArrayList<>();
-
             if (Util.isAndroid()) {
                 cmd.add("adb -s " + ConfigUtil.getUdid() + " logcat > " + logName);
             } else {
@@ -830,7 +761,6 @@ public final class Driver {
 
             Util.exeCmd(cmd);
         };
-
         Thread thread = new Thread(newRunnable);
         thread.setDaemon(true);
         thread.start();
@@ -849,159 +779,6 @@ public final class Driver {
         }
     }
 
-    public static void clickByCoordinate(int x, int y) {
-        log.info(getMethodName());
-        log.info("X: " + x + " Y: " + y);
-
-        try {
-            TouchAction touchAction = new TouchAction(driver);
-            //touchAction.press(PointOption.point(x,y)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(100))).release().perform();
-            //touchAction.tap(PointOption.point(x,y)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(100))).release().perform();
-            touchAction.tap(PointOption.point(x, y)).perform();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Fail to clickByCoordinate");
-        }
-    }
-
-    public static void pinch(int headX, int headY, int tailX, int tailY, boolean isUnpinch) {
-        log.info(getMethodName());
-
-        int lineCenterX = (headX + tailX) / 2;
-        int lineCenterY = (headY + tailY) / 2;
-        int height = getDeviceHeight();
-
-        //Make sure headX is less than tailX
-        if (headX > tailX) {
-            int tmp = headX;
-            headX = tailX;
-            tailX = tmp;
-
-            tmp = headY;
-            headY = tailY;
-            tailY = tmp;
-        }
-
-        log.info("isUnpinch " + isUnpinch + " headX: " + headX + " headY: " + headY + " tailX: " + tailX + " tailY:" + tailY + " centerX:" + lineCenterX + " centerY: " + lineCenterY);
-
-        //限制范围 防止触发顶部和底部状态功能菜单
-        if (headY < 200) {
-            headY = 200;
-        }
-
-        if (tailY < 200) {
-            tailY = 200;
-        }
-
-        if (headY > height - 200) {
-            headY = height - 200;
-        }
-
-        if (tailY > height - 200) {
-            tailY = height - 200;
-        }
-
-        TouchAction touchActionHead = new TouchAction(driver);
-        TouchAction touchActionTail = new TouchAction(driver);
-
-        //Android
-        if (Util.isAndroid()) {
-            //放大
-            if (isUnpinch) {
-                touchActionHead.press(PointOption.point(lineCenterX, lineCenterY)).moveTo(PointOption.point(headX, headY)).release();
-                touchActionTail.press(PointOption.point(lineCenterX, lineCenterY)).moveTo(PointOption.point(tailX, tailY)).release();
-            } else {
-                //缩小
-                touchActionHead.press(PointOption.point(headX, headY)).moveTo(PointOption.point(lineCenterX, lineCenterY)).release();
-                touchActionTail.press(PointOption.point(tailX, tailY)).moveTo(PointOption.point(lineCenterX, lineCenterY)).release();
-            }
-        } else {//iOS         //414,736
-            if (isUnpinch) {
-                touchActionHead.press(PointOption.point(lineCenterX, lineCenterY)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(200))).moveTo(PointOption.point(100, 0)).release();
-                touchActionTail.press(PointOption.point(lineCenterX, lineCenterY)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(200))).moveTo(PointOption.point(-100, 0)).release();
-            } else {
-                //缩小
-                touchActionHead.press(PointOption.point(headX, headY)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(200))).moveTo(PointOption.point(lineCenterX - headX, 0)).release();
-                touchActionTail.press(PointOption.point(tailX, tailY)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(200))).moveTo(PointOption.point(lineCenterX - tailX, 0)).release();
-            }
-        }
-        try {
-            MultiTouchAction multiTouchAction = new MultiTouchAction(driver);
-            multiTouchAction.add(touchActionHead);
-            multiTouchAction.add(touchActionTail);
-            multiTouchAction.perform();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Fail to perform pinch or unpinch");
-        }
-
-    }
-
-    public static void drag(int headX, int headY, int tailX, int tailY) {
-        log.info(getMethodName());
-
-        if (headY < 200) {
-            headY = 200;
-        }
-
-        log.info("Drag operation " + " headX: " + headX + " headY: " + headY + " tailX: " + tailX + " tailY:" + tailY);
-        TouchAction dragAction = new TouchAction(driver);
-
-        try {
-            if (!Util.isAndroid()) {
-                tailX = tailX - headX;
-                tailY = tailY - headY;
-            }
-
-            if (Util.isAndroid()) {
-                dragAction.longPress(PointOption.point(headX, headY)).moveTo(PointOption.point(tailX, tailY)).release().perform();
-            } else {
-                dragAction.longPress(PointOption.point(headX, headY)).waitAction(WaitOptions.waitOptions(Duration.ofSeconds(1))).moveTo(PointOption.point(tailX, tailY)).release().perform();
-                //.longPress(LongPressOptions.longPressOptions().withDuration(Duration.ofSeconds(3)))
-            }
-        } catch (Exception e) {
-            log.error("Fail to perform drag operation");
-        }
-    }
-
-    public static void doubleClickByCoordinate(int x, int y) {
-        log.info(getMethodName());
-        log.info("Double click X: " + x + " Y: " + y);
-
-        try {
-            TouchAction touchAction = new TouchAction(driver);
-            //touchAction.press(PointOption.point(x,y)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(100))).release().perform();
-            //touchAction.tap(PointOption.point(x,y)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(100))).release().perform();
-            touchAction.tap(PointOption.point(x, y)).waitAction(WaitOptions.waitOptions(Duration.ofMillis(200))).tap(PointOption.point(x, y)).perform();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Fail to doubleClickByCoordinate");
-        }
-    }
-
-    public static void LongPressCoordinate(int x, int y) {
-        log.info("LongPressCoordinate : x :" + x + " y : " + y);
-        TouchAction touchAction = new TouchAction(driver);
-
-        int endX = x;
-        int endY = y + 10;
-
-        try {
-            //touchAction.longPress(PointOption.point(x,y)).waitAction(WaitOptions.waitOptions(Duration.ofSeconds(10))).perform();
-
-            if (!Util.isAndroid()) {
-                endX = 0;
-                y = 10;
-            }
-            touchAction.longPress(PointOption.point(x, y)).waitAction(WaitOptions.waitOptions(Duration.ofSeconds(10)))
-                    .moveTo(PointOption.point(endX, endY)).release().perform();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Fail to do long press");
-        }
-    }
-
     public static void rotateToLandscape(boolean landscape) {
         log.info(getMethodName());
 
@@ -1016,11 +793,8 @@ public final class Driver {
         log.info(driver.getOrientation().toString());
     }
 
-    public static void swipeVertical(boolean scrollDown) {
-        swipeVertical(scrollDown, null);
-    }
 
-    public static void swipeVertical(boolean scrollDown, StringBuilder builder) {
+    public static void swipeVertical(boolean scrollDown) {
         log.info(getMethodName());
 
         Dimension dimensions = driver.manage().window().getSize();
@@ -1049,10 +823,6 @@ public final class Driver {
         }
 
         swipe(startX, startY, endX, endY);
-
-        if (builder != null) {
-            builder.append("SWIPE : " + startX + "," + startY + "," + endX + "," + endY + "\n");
-        }
     }
 
     public static void swipeHorizontally(boolean leftToRight) {
@@ -1107,28 +877,7 @@ public final class Driver {
 
     public static void pressHomeKey() {
         log.info(getMethodName());
-
         pressKeyCode(AndroidKey.HOME);
-    }
-
-    public static int getScreenScale() {
-        int scale = 1;
-
-        if (!Util.isAndroid()) {
-            scale = 2;
-
-            int width = Driver.getDeviceWidth();
-            int height = Driver.getDeviceHeight();
-
-            if (width == 414 || height == 812) {
-                //Plus deviceWidth = 414
-                //iPhone X deviceHeight = 812
-                scale = 3;
-            }
-        }
-
-        log.info("Screen scale is :  " + scale);
-        return scale;
     }
 
     public static String getMethodName() {
@@ -1148,5 +897,13 @@ public final class Driver {
                 port = ThreadLocalRandom.current().nextInt();
             }
         }
+    }
+
+    public static void appRelaunch() {
+        driver.launchApp();
+    }
+
+    public static void takeScreenShot() {
+        takeScreenShot(String.valueOf(screenshotCount++));
     }
 }

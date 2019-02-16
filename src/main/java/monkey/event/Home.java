@@ -1,6 +1,6 @@
 package monkey.event;
 
-import com.perfectomator.utils.Utils;
+import monkey.Utils;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import java.util.HashMap;

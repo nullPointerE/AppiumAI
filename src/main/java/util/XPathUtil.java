@@ -44,7 +44,6 @@ public class XPathUtil {
     private static ArrayList<Map> loginElemList;
     private static Set<String> xpathBlackSet;
     private static Set<String> nodeXpathBlackSet;
-    private static int scale;
     private static boolean ignoreCrash;
     private static boolean removedBounds = false;
     private static boolean swipeVertical = ConfigUtil.getBooleanValue(ConfigUtil.ENABLE_VERTICAL_SWIPE);
@@ -90,7 +89,6 @@ public class XPathUtil {
 
     private static Set<String> getBlackKeyXpathSet(List<String> list){
         Set<String> set = new HashSet<>();
-
         for(String item : list){
             if(Util.isXpath(item)){
                 set.add(item);
@@ -211,8 +209,6 @@ public class XPathUtil {
 
         log.info("clickable elements xpath: " + clickXpath);
 
-        //Get screen scale
-        scale = Driver.getScreenScale();
         deviceHeight = Driver.getDeviceHeight();
         deviceWidth = Driver.getDeviceWidth();
 
@@ -283,7 +279,7 @@ public class XPathUtil {
 
             if((isValid == PackageStatus.APP_RESTART || !stop) && restart) {
                 //relaunch后 要把CurrentXml 设成getPageSource
-                Driver.appRelaunch(repoStep);
+                Driver.appRelaunch();
             }
         }
 
@@ -318,7 +314,6 @@ public class XPathUtil {
 
             //String appName;
             clickCount++;
-            repoStep.append("CLICK : " + x + "," + y + "\n");
 
             clickFailureElementList.add(elem.toString());
             elem.click();
@@ -355,7 +350,6 @@ public class XPathUtil {
                         int index = Util.internalNextInt(0,size);
                         String text = inputTextList.get(index);
                         elem.setValue(text );
-                        repoStep.append("INPUT :" + elem.toString() + " ; " + text + "\n");
                         log.info("Element " + temp + " set text : " + text);
                         break;
                     }
@@ -458,7 +452,7 @@ public class XPathUtil {
                 if (currentXML.contains(key)){
                     log.info("Back key trigger : " + key + " is found, press back key");
                     Driver.takeScreenShot();
-                    Driver.pressBack(repoStep);
+                    Driver.pressBack();
                     currentXML = Driver.getPageSource();
                     return currentXML;
                 }
@@ -631,7 +625,7 @@ public class XPathUtil {
             if(swipeVertical){
                 log.info("Swipe vertical is enabled.");
 
-                Driver.swipeVertical(false, repoStep);
+                Driver.swipeVertical(false);
                 currentXML = Driver.getPageSource();
 
                 previousPageStructure = afterPageStructure;
@@ -689,7 +683,7 @@ public class XPathUtil {
                     //按back Key键后 返回到了Home Screen 重新启动app
                     if(pressBackCount > 0 && isValidPackageName(packageName,false) != PackageStatus.VALID ){
                         log.info("Returned to Home Screen,due to press back key, so restart app... pressBackCount is :" + pressBackCount);
-                        Driver.appRelaunch(repoStep);
+                        Driver.appRelaunch();
 
                         pressBackCount--;
                         currentXML =  Driver.getPageSource();
@@ -829,14 +823,8 @@ public class XPathUtil {
 
     protected static boolean isSamePage(String pre,String after){
         log.info("Method: isSamePage");
-        boolean ret = pre.equals(after);
         //退出时不截图, 只在界面发生变化且stop=false才截图。
-        if(!ret && !stop) {
-            //TODO:Remove comment
-            //Driver.takeScreenShot();
-            log.info("++++++++++++++++++ Activity Name  :  " + Driver.getCurrentActivity() + "+++++++++++++++++++++++");
-        }
-        return ret;
+        return pre.equals(after);
     }
 
     private static String getNodeXpath(Node node){
